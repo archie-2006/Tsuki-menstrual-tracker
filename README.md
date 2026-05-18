@@ -23,8 +23,14 @@ Your data belongs to you and you only.
 1. Go to the **[Releases](../../releases)** tab on this repository.
 2. Download the `Tsuki.zip` file for the latest version release.
 3. Double-click the `.zip` file to extract the `Tsuki.app` application.
-4. Move `Tsuki.app` to your Applications folder and double-click to open!
-   > *Note: If macOS gives an "unidentified developer" warning, simply right-click the app and select "Open" the first time you run it.*
+4. Move `Tsuki.app` to your Applications folder and double-click to open.
+   > *Note: If macOS gives an unidentified developer warning, simply right-click the app and select Open the first time you run it.*
+
+### For Windows Users (Downloadable App)
+1. Go to the **[Releases](../../releases)** tab on this repository.
+2. Download the latest **`Tsuki.exe`** file.
+3. Move `Tsuki.exe` to your Desktop or preferred folder and double-click to launch.
+   > *Note: Because this is an independent open-source binary, Windows Defender SmartScreen might show a warning. Click **More Info** and then **Run anyway** to open the app.*
 
 ### For Developers
 To run Tsuki locally or compile it yourself on Mac, Windows, or Linux:
