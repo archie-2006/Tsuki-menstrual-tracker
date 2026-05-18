@@ -7,13 +7,21 @@ from datetime import datetime
 from model import analyze_cycle_data
 from chatbot import TsukiBot
 
+# Define a safe, cross-platform path in the user's home directory to bypass read-only sandbox limits
+DATA_FILE = os.path.join(os.path.expanduser("~"), ".tsuki_data.json")
+
 def main(page: ft.Page):
+    # --- PHYSICAL WINDOW GEOMETRY CONTROL ---
     page.title = "Tsuki 🌙"
     page.window_width = 400
     page.window_height = 800
     page.theme_mode = ft.ThemeMode.LIGHT
     page.scroll = "adaptive"
-    page.padding = 20
+    page.padding = 10
+    
+    # FORCE ROOT ENGINE TO STICK TO TOP WINDOW GLASS EDGE
+    page.vertical_alignment = ft.MainAxisAlignment.START
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     
     # Custom Typography 
     page.fonts = {
@@ -64,7 +72,7 @@ def main(page: ft.Page):
         except Exception as e:
             print(f"Notification Error: {e}")
 
-    # --- NATIVE FILE MEMORY STAGE ---
+    # --- NATIVE FILE MEMORY STAGE (HOME DIRECTORY SAFE) ---
     def save_data_to_device():
         serializable_cycles = []
         for c in state["logged_cycles"]:
@@ -77,12 +85,12 @@ def main(page: ft.Page):
             "is_irregular": state["is_irregular"],
             "user_fixed_length": state["user_fixed_length"]
         }
-        with open("tsuki_data.json", "w") as f:
+        with open(DATA_FILE, "w") as f:
             json.dump(payload, f)
 
     def load_data_from_device():
         try:
-            with open("tsuki_data.json", "r") as f:
+            with open(DATA_FILE, "r") as f:
                 payload = json.load(f)
             state["is_irregular"] = payload.get("is_irregular", False)
             state["user_fixed_length"] = payload.get("user_fixed_length", 28)
@@ -150,10 +158,14 @@ def main(page: ft.Page):
     # --- CALENDAR CORE ACTION SETS ---
     def handle_start_date(e):
         if start_picker.value:
-            clean_start = start_picker.value.replace(tzinfo=None)
+            # Safely grab the exact calendar date bypassing UTC offset traps
+            local_dt = start_picker.value.astimezone() if start_picker.value.tzinfo else start_picker.value
+            clean_start = datetime(local_dt.year, local_dt.month, local_dt.day)
+            
             if any(c["start"].date() == clean_start.date() for c in state["logged_cycles"]):
                 trigger_push_notification("Tsuki 🌙", "This start date is already logged!")
                 return
+                
             state["logged_cycles"].append({"start": clean_start, "end": None})
             save_data_to_device()
             trigger_push_notification("Tsuki 🌙", f"Cycle started on {clean_start.strftime('%b %d')}.")
@@ -162,7 +174,9 @@ def main(page: ft.Page):
 
     def handle_end_date(e):
         if end_picker.value and len(state["logged_cycles"]) > 0:
-            clean_end = end_picker.value.replace(tzinfo=None)
+            local_dt = end_picker.value.astimezone() if end_picker.value.tzinfo else end_picker.value
+            clean_end = datetime(local_dt.year, local_dt.month, local_dt.day)
+            
             valid_open_cycles = [
                 c for c in state["logged_cycles"] 
                 if c["end"] is None and c["start"] <= clean_end
@@ -230,8 +244,8 @@ def main(page: ft.Page):
     # SCREENS DESIGN ASSEMBLY
     # ==========================================
     
-    # 1. HOME SCREEN: RECONFIGURED TOP-HEADER PATTERN
-    app_title_header = ft.Text("Tsuki 🌙", size=32, weight=ft.FontWeight.BOLD, color=TEXT_COLOR, text_align=ft.TextAlign.CENTER)
+    # 1. HOME SCREEN: CEILING-ANCHORED PATTERN
+    app_title_header = ft.Text("Tsuki 🌙", size=32, weight=ft.FontWeight.BOLD, color=TEXT_COLOR)
     
     setup_back_btn = ft.Button(
         content=ft.Text("↩ Setup", color=TEXT_COLOR, size=11, weight=ft.FontWeight.BOLD), 
@@ -252,17 +266,22 @@ def main(page: ft.Page):
     dates_list_ui = ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER)
     history_card = ft.Container(content=ft.Column([button_row, dates_list_ui], horizontal_alignment=ft.CrossAxisAlignment.CENTER), padding=10)
     
-    # Header sits at the absolute top index inside this Layout Column tree!
-    home_screen_layout = ft.Column(
-        [
-            app_title_header,
-            setup_back_btn,
-            ft.Container(height=10),
-            prediction_card, 
-            daily_insights_container, 
-            history_card
-        ], 
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER
+# Structural layout fix: Anchors components right against the frame ceiling
+    home_screen_layout = ft.Container(
+        content=ft.Column(
+            [
+                app_title_header,
+                setup_back_btn,
+                ft.Container(height=10),
+                prediction_card, 
+                daily_insights_container, 
+                history_card
+            ], 
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.START
+        ),
+        alignment=ft.Alignment(0, -1),
+        margin=0  # Fixed: Unified zero value replaces the broken margin module!
     )
 
     # 2. CHAT SCREEN
@@ -280,7 +299,7 @@ def main(page: ft.Page):
     wheel_stack = ft.Stack([cycle_progress_ring, ft.Container(content=ft.Column([cycle_day_lbl, cycle_phase_lbl], horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER), top=55, left=35, width=110)], width=180, height=180)
     cycle_view_screen_layout = ft.Column([ft.Text("Visual Cycle Phase Indicator", size=22, weight=ft.FontWeight.BOLD, color=TEXT_COLOR), ft.Container(height=40), wheel_stack], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
 
-    # Shell configuration anchor layout blocks
+    # Base shell wrappers
     app_body = ft.Column(expand=True)
     app_body.controls.append(home_screen_layout) 
 
@@ -301,6 +320,7 @@ def main(page: ft.Page):
     irregular_checkbox = ft.Checkbox(label="My cycle is highly Irregular 👑", fill_color=ACCENT_COLOR, value=False)
     setup_view = ft.Column([ft.Text("Welcome to Tsuki 🌙", size=32, weight=ft.FontWeight.BOLD, color=TEXT_COLOR), days_input, irregular_checkbox, ft.Button(content=ft.Text("Enter Dashboard ✨", color=CARD_BG), bgcolor=ACCENT_COLOR, on_click=lambda e: page.controls.clear() or page.add(app_dashboard_scaffolding) or trigger_phase_notification() or refresh_ui())], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
 
+    # Boot up the background time monitor for 7:00 AM push notifications
     page.run_task(morning_insight_scheduler_loop)
 
     if load_data_from_device() and state["logged_cycles"]:
