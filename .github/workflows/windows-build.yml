@@ -26,6 +26,12 @@ jobs:
       - name: Compile Windows App
         run: flet pack main.py --name "Tsuki"
 
+      - name: Save Artifact for Manual Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tsuki-Windows-EXE
+          path: dist/Tsuki.exe
+
       - name: Upload EXE to Release page
         if: github.event_name == 'release'
         env:
