@@ -26,7 +26,7 @@ jobs:
       - name: Compile Windows App
         run: flet pack main.py --name "Tsuki"
 
-      - name: Upload EXE to your Release page
+      - name: Upload EXE to Release page
         if: github.event_name == 'release'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
