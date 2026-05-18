@@ -1,0 +1,17 @@
+# Personal Application Database
+tsuki_data.json
+
+# Flet and PyInstaller Build Artifacts
+build/
+dist/
+*.spec
+
+# Python Virtual Environments & Caches
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Mac OS specific
+.DS_Store
